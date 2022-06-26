@@ -1,0 +1,31 @@
+version: '3.9'
+services:
+
+  node_1:
+    container_name: chatty_node_1
+    image: cockroachdb/cockroach:latest
+    volumes:
+      - ./data/chatty_node_1:/cockroach/cockroach-data
+    command: start --insecure --join=chatty_node_1,chatty_node_2
+    ports:
+      - "26257:26257"
+      - "8080:8080"
+    networks:
+      chatty_bridge:
+        aliases:
+          - chatty_node_1
+
+  node_2:
+    container_name: chatty_node_2
+    image: cockroachdb/cockroach:latest
+    volumes:
+      - ./data/chatty_node_2:/cockroach/cockroach-data
+    command: start --insecure --join=chatty_node_1,chatty_node_2
+    networks:
+      chatty_bridge:
+        aliases:
+          - chatty_node_2
+
+networks:
+  chatty_bridge:
+    driver: bridge

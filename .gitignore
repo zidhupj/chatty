@@ -1,3 +1,6 @@
+#data
+/cockroach-docker/data/
+
 # Logs
 logs
 *.log

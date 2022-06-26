@@ -1,0 +1,28 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "cockroachdb"
+  url      = env("DATABASE_URL")
+}
+
+model user {
+  username        String   @id(map: "primary")
+  email           String?  @unique
+  phone           String?  @unique
+  name            String
+  dateOfBirth     DateTime @db.Timestamptz(0)
+  avatar          String?
+  role            Role
+  myContacts      user[]   @relation("userContacts", references: [username])
+  relatedContacts user[]   @relation("userContacts", references: [username])
+}
+
+enum Role {
+  user
+  admin
+}
