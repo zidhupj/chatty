@@ -3,6 +3,10 @@ import styles from './App.module.css';
 import { Route, Routes } from 'solid-app-router';
 import { Chat, Login, Signup } from './pages';
 import { store, setStore } from './store/store';
+import toast, { Toaster } from 'solid-toast';
+import { styled, css } from 'solid-styled-components';
+
+const notify = () => toast('Here is your toast.');
 
 const App: Component = () => {
 

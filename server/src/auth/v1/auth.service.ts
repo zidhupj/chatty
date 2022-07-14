@@ -1,9 +1,10 @@
-import { Injectable } from "@nestjs/common";
+import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
 import { CookieOptions, Response } from 'express'
 import { hashOtp, verifyOtp } from "src/utils/hash";
 import { GenerateOtpInputv1, LoginOtdv1, SignUpOtdv1 } from "../dto";
 import { Prisma, PrismaClient, Role, user } from '@prisma/client'
 import { generateAccessToken, generateRefreshToken } from "src/utils";
+import { defaultAvatar } from 'src/assets/svg/defaults'
 const prisma = new PrismaClient()
 
 @Injectable()
@@ -29,9 +30,11 @@ export class AuthServicev1 {
     verifyOtp = async (hashedOtp: string, otp: number, contact: any) => {
         const valid = await verifyOtp(hashedOtp, otp, contact);
         if (!valid) {
-            const e = new Error("Invalid OTP");
-            e["known"] = true;
-            throw e;
+            throw new HttpException({
+                error: "Invalid OTP",
+                message: ["OTP", "OTP is inavalid!"],
+                status: HttpStatus.BAD_REQUEST
+            }, HttpStatus.BAD_REQUEST)
         }
     }
 
@@ -49,31 +52,51 @@ export class AuthServicev1 {
     }
 
     signup = async (dto: SignUpOtdv1) => {
-        const userData: Prisma.userCreateInput = {
-            name: dto.name,
-            username: dto.username,
-            dateOfBirth: dto.dateOfBirth,
-            avatar: dto.avatar ? dto.avatar : null,
-            role: Role.user
+        try {
+            const userData: Prisma.userCreateInput = {
+                name: dto.name,
+                username: dto.username,
+                dateOfBirth: new Date(dto.dateOfBirth),
+                avatar: dto.avatar ? dto.avatar : defaultAvatar,
+                role: Role.user
+            }
+            dto.contact["phone"] ? userData["phone"] = dto.contact["phone"] : userData["email"] = dto.contact["email"];
+            const newUser = await prisma.user.create({
+                data: userData
+            })
+            console.log({ newUser })
+            return newUser;
+
+        } catch (err) {
+            if (err?.meta?.target && err?.meta?.target?.length != 0) {
+                throw new HttpException({
+                    error: `Invalid Credentials`,
+                    message: err.meta.target.map((value) => `${value} already exists.`),
+                    status: HttpStatus.BAD_REQUEST
+                }, HttpStatus.BAD_REQUEST)
+            } else {
+                throw new Error("Database user creation critical internal error!")
+            }
         }
-        dto.contact["phone"] ? userData["phone"] = dto.contact["phone"] : userData["email"] = dto.contact["email"];
-        const newUser = await prisma.user.create({
-            data: userData
-        })
-        console.log({ newUser })
-        return newUser;
     }
 
     login = async (dto: LoginOtdv1) => {
-        const user = await prisma.user.findUnique({
-            where: Object.entries(dto.contact).reduce((a, [k, v]) => (v ? (a[k] = v, a) : a), {})
-        })
-        // console.log(user)
-        if (!user) {
-            const e = new Error("User does not exist!");
-            e["known"] = true;
-            throw e;
+        try {
+            const user = await prisma.user.findUnique({
+                where: Object.entries(dto.contact).reduce((a, [k, v]) => (v ? (a[k] = v, a) : a), {})
+            })
+            // console.log(user)
+            if (!user) {
+                throw new HttpException({
+                    error: `Invalid Credentials`,
+                    message: ["User does not exist!"],
+                    status: HttpStatus.NOT_FOUND
+                }, HttpStatus.NOT_FOUND)
+            }
+            return user;
+        } catch (err) {
+            console.log(err)
+            throw new Error("Database user retrieval critical internal error!")
         }
-        return user;
     }
 }

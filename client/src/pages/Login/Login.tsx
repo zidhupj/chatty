@@ -2,12 +2,14 @@ import { Component, ComponentProps, onMount } from 'solid-js';
 import { styled, css } from 'solid-styled-components';
 import { createSignal, createEffect } from 'solid-js';
 import { Link, Route, Routes, useNavigate } from 'solid-app-router';
-import { Button, Form, FormContainer, Input, InputContainer, JustLink, Logo, Title } from '../../components';
+import { Button, Form, FormContainer, Input, InputContainer, JustLink, Logo, Title, ToastContainer } from '../../components';
 import { schema } from '../../functions/validate';
-import { notificationService } from '@hope-ui/solid';
-import { publicRequest } from '../../functions/requestMethods';
+import { privateRequest, publicRequest } from '../../functions/requestMethods';
 import { AxiosError } from 'axios';
 import { setStore, store } from '../../store/store';
+import toast, { Toaster } from 'solid-toast';
+import { BiSolidBug, BiSolidRadiation } from 'solid-icons/bi';
+import { FaSolidAtom } from 'solid-icons/fa';
 
 const center = css`
     display: flex;
@@ -48,16 +50,19 @@ const Login: Component<LoginProps> = (props: LoginProps) => {
         },
         otp: '',
     })
+    const toastId = toast.custom(() =>
+        <ToastContainer status="success">
+            <BiSolidBug size="30px" />
+            <div>This is a toast.</div>
+        </ToastContainer>, { duration: 100_000_000, })
 
     const nextHandler = async () => {
         const { contact, otp } = values();
-        notificationService.show({
-            id: "otp",
-            status: "info",
-            title: "Trying to send OTP",
-            description: "You will receive an OTP on your registered email or phone number",
-            loading: true
-        })
+        toast.custom(() =>
+            <ToastContainer status="loading">
+                <FaSolidAtom size="30px" />
+                <div>Trying to send OTP</div>
+            </ToastContainer>, { id: toastId, duration: 100_000_000, })
         if (contact.email || contact.phone || contact.username) {
             console.log("was 2 here")
             try {
@@ -70,44 +75,45 @@ const Login: Component<LoginProps> = (props: LoginProps) => {
             } catch (error: any) {
                 if (error instanceof AxiosError) {
                     console.log(error);
-                    notificationService.update({
-                        id: "otp",
-                        status: "danger",
-                        title: "Invalid Email or Phone Number",
-                        description: error.response?.data?.message || "Invalid Email or Phone Number",
-                        duration: 20_000,
-                    })
+                    toast.custom(() =>
+                        <ToastContainer status="danger">
+                            <BiSolidRadiation size="30px" />
+                            <div>User does not exist!</div>
+                        </ToastContainer>, { id: toastId, duration: 100_000_000, })
                 }
             }
         } else {
-            notificationService.update({
-                id: "otp",
-                status: "danger",
-                title: "Invalid Username",
-                description: "username should have a minimum of 3 amd maximum of 50 characters and should not start with '+' !",
-                duration: 20_000,
-            })
+            toast.custom(() =>
+                <ToastContainer status="danger">
+                    <BiSolidRadiation size="30px" />
+                    <div>Contact field should not be empty!</div>
+                </ToastContainer>, { id: toastId, duration: 100_000_000, })
         }
     }
 
     const handleLogIn = async () => {
         try {
-            const { data } = await publicRequest.post('/auth/login', values())
+            const { data } = await privateRequest.post('/auth/login', values())
             setStore("user", () => data)
             store.user?.username && localStorage.setItem('user', JSON.stringify(store.user));
             console.log(store.user)
-            // navigate('/chat')
+            navigate('/chat')
 
         } catch (error: any) {
             if (error instanceof AxiosError) {
                 console.log(error);
-                notificationService.update({
-                    id: "otp",
-                    status: "danger",
-                    title: "Invalid Creditentials",
-                    description: error.response?.data?.message || "Invalid Creditentials",
-                    duration: 5_000,
-                })
+                // notificationService.update({
+                //     id: "otp",
+                //     status: "danger",
+                //     title: "Invalid Creditentials",
+                //     description: error.response?.data?.message || "Invalid Creditentials",
+                //     duration: 5_000,
+                // })
+                toast.custom(() =>
+                    <ToastContainer status="danger">
+                        <BiSolidRadiation size="30px" />
+                        <div>{error.response?.data?.message[0] === "OTP" ? error.response?.data?.message[1] : "User does not exist!"}</div>
+                    </ToastContainer>, { id: toastId, duration: 100_000_000, })
             }
         }
     }
@@ -132,10 +138,10 @@ const Login: Component<LoginProps> = (props: LoginProps) => {
     return (
         <div>
             <Container>
-                <Left className={center}>
+                <Left class={center}>
                     CHATTY
                 </Left>
-                <Right className={center}>
+                <Right class={center}>
                     <FormContainer>
                         <Form onSubmit={(e) => { e.preventDefault() }}>
                             <Logo >
@@ -179,6 +185,13 @@ const Login: Component<LoginProps> = (props: LoginProps) => {
                     </FormContainer>
                 </Right>
             </Container>
+            <Toaster
+                containerStyle={{
+                    width: '45%',
+                    height: "fit-content",
+                    inset: "30px"
+                }}
+            />
         </div>
     )
 }

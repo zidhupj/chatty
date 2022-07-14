@@ -1,9 +1,12 @@
-import { notificationService } from '@hope-ui/solid';
+// import { notificationService } from '@hope-ui/solid';
 import { AxiosError } from 'axios';
 import { Link, useNavigate } from 'solid-app-router';
+import { BiSolidRadiation } from 'solid-icons/bi';
+import { FaSolidAtom } from 'solid-icons/fa';
 import { Accessor, Component, ComponentProps, createEffect, createSignal } from 'solid-js';
-import { FormContainer, Form, Logo, Title, InputContainer, Input, JustLink, DateContainer, DateLabel, DateInfo, Button } from '../../components'
-import { publicRequest } from '../../functions/requestMethods';
+import toast from 'solid-toast';
+import { FormContainer, Form, Logo, Title, InputContainer, Input, JustLink, DateContainer, DateLabel, DateInfo, Button, ToastContainer } from '../../components'
+import { privateRequest, publicRequest } from '../../functions/requestMethods';
 import { schema } from '../../functions/validate';
 import { store, setStore } from '../../store/store';
 
@@ -21,27 +24,43 @@ interface SignUpPart2Props extends ComponentProps<any> {
         hashedOtp: string;
         avatar: string;
     }>;
+    toastId: string;
 }
 
 const SignUpPart2: Component<SignUpPart2Props> = (props: SignUpPart2Props) => {
-    const { handleChange, values } = props;
+    const { handleChange, values, toastId } = props;
     const navigate = useNavigate();
     createEffect(() => {
         console.log(store.user.name);
     });
+    // notificationService.show({
+    //     id: "signin",
+    //     status: "info",
+    //     title: "Verifying OTP",
+    //     description: "Trying to verify otp",
+    //     loading: true
+    // })
+    // notificationService.show({
+    //     id: "signinnn",
+    //     status: "danger",
+    //     title: "Invalid Creditentials",
+    //     description: "Invalid Creditentials",
+    //     duration: 5_000,
+    // })
 
     const nextHandler = async () => {
 
         if (validate()) {
-            notificationService.show({
-                id: "otp",
-                status: "info",
-                title: "Verifying OTP",
-                loading: true
-            })
+            toast.custom(() =>
+                <ToastContainer status="loading">s
+                    <FaSolidAtom size="30px" />
+                    <div>Verifying OTP</div>
+                </ToastContainer>
+                , { id: toastId, duration: 100_000_000 })
 
             try {
-                const { data } = await publicRequest.post('/auth/signup', values())
+                console.log("Trying to signup")
+                const { data } = await privateRequest.post('/auth/signup', values())
                 setStore("user", () => data.user)
                 store.user?.username && localStorage.setItem('user', JSON.stringify(store.user));
                 console.log(store.user.email)
@@ -49,14 +68,25 @@ const SignUpPart2: Component<SignUpPart2Props> = (props: SignUpPart2Props) => {
             } catch (error: any) {
                 if (error instanceof AxiosError) {
                     console.log(error);
-                    notificationService.update({
-                        id: "otp",
-                        status: "danger",
-                        title: "Invalid Creditentials",
-                        description: error.response?.data?.message || "Invalid Creditentials",
-                        duration: 5_000,
-                    })
-                    navigate('/signup/')
+                    console.log(error.response?.data.message[0])
+                    console.log(error)
+                    if (error.response?.data.message[0] == "OTP") {
+                        toast.custom(() =>
+                            <ToastContainer status="danger">s
+                                <BiSolidRadiation size="30px" />
+                                <div>{error.response?.data.message[1]}</div>
+                            </ToastContainer>
+                            , { id: toastId, duration: 100_000_000 })
+                    } else {
+                        toast.custom(() =>
+                            <ToastContainer status="danger">s
+                                <BiSolidRadiation size="30px" />
+                                <div>{error.response?.data.message[0]}</div>
+                            </ToastContainer>
+                            , { id: toastId, duration: 100_000_000 })
+                        console.log(error.response?.data.message[0])
+                        navigate('/signup/')
+                    }
                 }
             }
         }
@@ -65,12 +95,18 @@ const SignUpPart2: Component<SignUpPart2Props> = (props: SignUpPart2Props) => {
     const validate = () => {
         const { otp } = values();
         if (schema.validate({ otp }).error) {
-            notificationService.update({
-                id: "otp",
-                status: "danger",
-                title: "Invalid OTP",
-                description: "The OTP has to be 6 digits long and should be a number!",
-            })
+            // notificationService.update({
+            //     id: "otp",
+            //     status: "danger",
+            //     title: "Invalid OTP",
+            //     description: "The OTP has to be 6 digits long and should be a number!",
+            // })
+            toast.custom(() =>
+                <ToastContainer status="danger">s
+                    <BiSolidRadiation size="30px" />
+                    <div>{"The OTP has to be 6 digits long and should be a number!"}</div>
+                </ToastContainer>
+                , { id: toastId, duration: 100_000_000 })
             return false;
         }
         return true;

@@ -1,11 +1,13 @@
 import { Component, ComponentProps, JSX, onMount } from 'solid-js';
-import { styled, css } from 'solid-styled-components';
+import { styled, css, keyframes } from 'solid-styled-components';
 import { createSignal, createEffect } from 'solid-js';
 import SignUpPart1 from './SignUpPart1';
 import SignUpPart2 from './SignUpPart2';
 import { Route, Routes, useNavigate } from 'solid-app-router';
 import axios from 'axios';
-import { Loader } from '../../components'
+import { Loader, ToastContainer } from '../../components'
+import toast, { Toaster } from 'solid-toast';
+import { BiSolidBug } from 'solid-icons/bi'
 
 const center = css`
     display: flex;
@@ -77,20 +79,23 @@ const Signup: Component<SignupProps> = (props: SignupProps) => {
         hashedOtp: '',
         avatar: '',
     })
+    // const toastOptions=
 
     createEffect(() => {
         console.log(values());
     })
 
+    const toastId = toast.custom(() =>
+        <ToastContainer status="success">
+            <BiSolidBug size="30px" />
+            <div>This is a toast.</div>
+        </ToastContainer>, { duration: 100_000_000, })
+
     onMount(async () => {
         let data: any = [];
 
         for (let i = 0; i < 6; i++) {
-            // const avatar = document.createElement('div');
             const response = await axios.get(`https://avatars.dicebear.com/api/avataaars/${Math.random()}.svg`);
-            // avatar.innerHTML = response.data;
-            // console.log(response.data);
-            // avatar.classList.add(avatarItem)
             const svg: string = response.data;
             const blob = new Blob([svg], { type: 'image/svg+xml' });
             const url = URL.createObjectURL(blob);
@@ -111,7 +116,6 @@ const Signup: Component<SignupProps> = (props: SignupProps) => {
             setBuffering(false);
             data.push(avatar);
         }
-        // console.log(data);
         setAvaList(data);
     })
 
@@ -130,7 +134,7 @@ const Signup: Component<SignupProps> = (props: SignupProps) => {
         <div>
             <Container>
                 <Left style={{ "flex-direction": "column" }}>
-                    <div className={center} style={{
+                    <div class={center} style={{
                         width: '100%', height: '100%',
                     }}><div style={{ "letter-spacing": "20px" }}>CHATTY</div></div>
                     {buffering() ? Loader :
@@ -140,23 +144,31 @@ const Signup: Component<SignupProps> = (props: SignupProps) => {
                             })}
                         </AvatarList>}
                 </Left>
-                <Right className={center}>
+                <Right class={center}>
                     <Routes>
-                        {/* <Route path="1" element={<h1>Hello</h1>} /> */}
                         <Route path="/*" element={<SignUpPart1
                             handleChange={handleChange}
                             values={values}
                             setValues={setValues}
                             contactValue={contactValue}
                             setContactValue={setContactValue}
+                            toastId={toastId}
                         />} />
                         <Route path="/part2" element={<SignUpPart2
                             handleChange={handleChange}
                             values={values}
+                            toastId={toastId}
                         />} />
                     </Routes>
                 </Right>
             </Container>
+            <Toaster
+                containerStyle={{
+                    width: '45%',
+                    height: "fit-content",
+                    inset: "30px"
+                }}
+            />
         </div>
     )
 }

@@ -1,10 +1,13 @@
-import { notificationService } from '@hope-ui/solid';
+// import { notificationService } from '@hope-ui/solid';
 import { AxiosError } from 'axios';
 import { Link, useNavigate } from 'solid-app-router';
 import { Accessor, Component, ComponentProps, createSignal, createEffect } from 'solid-js';
-import { FormContainer, Form, Logo, Title, InputContainer, Input, JustLink, DateContainer, DateLabel, DateInfo, Button } from '../../components'
+import { FormContainer, Form, Logo, Title, InputContainer, Input, JustLink, DateContainer, DateLabel, DateInfo, Button, ToastContainer } from '../../components'
 import { publicRequest } from '../../functions/requestMethods';
 import { schema } from '../../functions/validate';
+import { FaSolidAtom } from 'solid-icons/fa'
+import toast from 'solid-toast';
+import { BiSolidRadiation } from 'solid-icons/bi';
 
 interface SignUpPart1Props extends ComponentProps<any> {
     handleChange: (e: any) => void;
@@ -23,23 +26,22 @@ interface SignUpPart1Props extends ComponentProps<any> {
     setValues: any,
     setContactValue: any,
     contactValue: Accessor<string>,
+    toastId: string
 }
 
 const SignUpPart1: Component<SignUpPart1Props> = (props: SignUpPart1Props) => {
     const navigate = useNavigate();
-    const { handleChange, values, setValues, contactValue, setContactValue } = props;
+    const { handleChange, values, setValues, contactValue, setContactValue, toastId } = props;
 
 
     const nextHandler = async () => {
         if (validate()) {
-            notificationService.show({
-                id: "otp",
-                status: "info",
-                title: "Trying to send OTP",
-                description: "You will receive an OTP on your registered email or phone number",
-                loading: true
-            })
-
+            toast.custom(() =>
+                <ToastContainer status="loading">s
+                    <FaSolidAtom size="30px" />
+                    <div>Trying to send OTP</div>
+                </ToastContainer>
+                , { id: toastId, duration: 100_000_000 })
             try {
                 const { data } = await publicRequest.post('/auth/generate-otp', {
                     contact: values().contact
@@ -49,13 +51,12 @@ const SignUpPart1: Component<SignUpPart1Props> = (props: SignUpPart1Props) => {
             } catch (error: any) {
                 if (error instanceof AxiosError) {
                     console.log(error);
-                    notificationService.update({
-                        id: "otp",
-                        status: "danger",
-                        title: "Invalid Email or Phone Number",
-                        description: error.response?.data?.message || "Invalid Email or Phone Number",
-                        duration: 20_000,
-                    })
+                    toast.custom(() =>
+                        <ToastContainer status="danger">
+                            <BiSolidRadiation size="30px" />
+                            <div>{"An erorr"}</div>
+                        </ToastContainer>
+                        , { id: toastId, duration: 100_000_000 })
                 }
             }
         }
@@ -63,55 +64,55 @@ const SignUpPart1: Component<SignUpPart1Props> = (props: SignUpPart1Props) => {
 
     const validate = () => {
         const { name, contact, dateOfBirth, username } = values();
-        let flag = 0;
-        const settings = {
-            status: "danger" as "success" | "info" | "warning" | "danger" | undefined,
-            duration: 3_000
-        }
         if (schema.validate({ name }).error) {
-            notificationService.show({
-                title: "Invalid Name",
-                description: "Name should have a minimum of 3 amd maximum of 50 characters!",
-                ...settings
-            })
-            flag++;
+            toast.custom(() =>
+                <ToastContainer status="danger">
+                    <BiSolidRadiation size="30px" />
+                    <div>{"Name should have a minimum of 3 and maximum of 50 characters!"}</div>
+                </ToastContainer>
+                , { id: toastId, duration: 100_000_000 })
+            return false;
         }
         if (schema.validate({ username }).error) {
-            notificationService.show({
-                title: "Invalid username",
-                description: "username should have a minimum of 3 amd maximum of 50 characters and should not start with '+' !",
-                ...settings
-            })
-            flag++;
+            toast.custom(() =>
+                <ToastContainer status="danger">
+                    <BiSolidRadiation size="30px" />
+                    <div>{"username should have a minimum of 3 amd maximum of 50 characters and should not start with '+' !"}</div>
+                </ToastContainer>
+                , { id: toastId, duration: 100_000_000 })
+            return false;
         }
         if (contactValue() === 'email') {
             if (schema.validate({ email: contact.email }).error) {
-                notificationService.show({
-                    title: "Invalid Email",
-                    description: "Email should be in standard format!",
-                    ...settings
-                })
-                flag++;
+                toast.custom(() =>
+                    <ToastContainer status="danger">
+                        <BiSolidRadiation size="30px" />
+                        <div>{"Email is invalid!"}</div>
+                    </ToastContainer>
+                    , { id: toastId, duration: 100_000_000 })
+                return false;
             }
         } else if (contactValue() === 'phone') {
             if (schema.validate({ phone: contact.phone }).error) {
-                notificationService.show({
-                    title: "Invalid Phone Number",
-                    description: "Phone number should be in standard format!",
-                    ...settings
-                })
-                flag++;
+                toast.custom(() =>
+                    <ToastContainer status="danger">
+                        <BiSolidRadiation size="30px" />
+                        <div>{"Phone number is invalid!"}</div>
+                    </ToastContainer>
+                    , { id: toastId, duration: 100_000_000 })
+                return false;
             }
         }
         if (schema.validate({ dateOfBirth }).error) {
-            notificationService.show({
-                title: "Invalid Date of Birth",
-                description: "Date of Birth should be valid and not exeed today!",
-                ...settings
-            })
-            flag++;
+            toast.custom(() =>
+                <ToastContainer status="danger">
+                    <BiSolidRadiation size="30px" />
+                    <div>{"Date of Birth is invalid."}</div>
+                </ToastContainer>
+                , { id: toastId, duration: 100_000_000 })
+            return false;
         }
-        return flag === 0;
+        return true;
     }
 
     const changeContact = (c: string) => {

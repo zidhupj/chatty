@@ -75,7 +75,7 @@ export const InputContainer = styled('div')`
         transition: all 0.1s ease;
         cursor: text;
     }
-    ${Input.className}:focus-visible + label,${Input.className}:not(:placeholder-shown) + label{
+    ${Input.class}:focus-visible + label,${Input.class}:not(:placeholder-shown) + label{
         top: 3px;
         left:10px;
         color: turquoise;
@@ -83,10 +83,11 @@ export const InputContainer = styled('div')`
     }
 `
 export const JustLink = styled('div')`
+    color: turquoise;
     text-align: right;
     color: turquoise;
     text-decoration: underline;
-    a { cursor: pointer; }
+    a { cursor: pointer; color: turquoise;}
 `
 export const DateContainer = styled('div')`
     display: flex;

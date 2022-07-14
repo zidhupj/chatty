@@ -4,6 +4,7 @@ import { NextFunction, Request, Response } from "express";
 import { verifyToken } from "src/utils";
 
 export async function jwtMiddleware(req: Request, res: Response, next: NextFunction) {
+    console.log(req.headers.cookie)
     const accessToken = req.cookies['accessToken'];
     console.log(accessToken);
     const userCred = await verifyToken(accessToken)

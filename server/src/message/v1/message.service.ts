@@ -1,0 +1,80 @@
+import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { Prisma, PrismaClient, Role, user } from '@prisma/client'
+import { Socket } from "socket.io";
+import { parseCookie, verifyToken } from "src/utils";
+
+const prisma = new PrismaClient();
+
+@Injectable()
+export class MessageServicev1 {
+
+    getUserCred = async (socket: Socket) => {
+        const cookies = parseCookie(socket.handshake.headers.cookie)
+        const userCred: { username: string, role: string } = await verifyToken(cookies.accessToken)
+        console.log(userCred);
+        if (!userCred?.username) {
+            socket.emit("ERROR", new UnauthorizedException());
+            socket.disconnect();
+        }
+        return userCred;
+    }
+
+    storeSocketId = async (username: string, socket: Socket) => {
+        await prisma.user.update({
+            where: {
+                username: username,
+            }, data: {
+                socketId: socket.id
+            }
+        })
+    }
+
+    deleteSocketId = async (username: string) => {
+        await prisma.user.update({
+            where: {
+                username: username,
+            }, data: {
+                socketId: ""
+            }
+        })
+    }
+
+    createMessage = async (chatId: string, from: string, to: string, message: string) => {
+        const result = await prisma.user.update({
+            where: { username: from },
+            data: {
+                chats: {
+                    update: {
+                        where: { id: BigInt(chatId), },
+                        data: {
+                            messages: {
+                                create: {
+                                    from: { connect: { username: from } },
+                                    to: { connect: { username: to } },
+                                    message: message
+                                }
+                            }
+                        }
+                    },
+                }
+            }, select: {
+                chats: {
+                    where: { id: BigInt(chatId) },
+                    select: {
+                        messages: {
+                            orderBy: { createdAt: 'desc' },
+                            select: {
+                                fromId: true,
+                                toId: true,
+                                createdAt: true,
+                                message: true,
+                            },
+                            take: 1
+                        }
+                    }
+                }
+            }
+        })
+        return result.chats[0].messages[0];
+    }
+}
