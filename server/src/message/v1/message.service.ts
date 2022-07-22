@@ -13,8 +13,7 @@ export class MessageServicev1 {
         const userCred: { username: string, role: string } = await verifyToken(cookies.accessToken)
         console.log(userCred);
         if (!userCred?.username) {
-            socket.emit("ERROR", new UnauthorizedException());
-            socket.disconnect();
+            throw new Error("Invalid credentials")
         }
         return userCred;
     }
@@ -70,11 +69,41 @@ export class MessageServicev1 {
                                 message: true,
                             },
                             take: 1
+                        },
+                        users: {
+                            where: {
+                                username: { not: from }
+                            },
+                            select: {
+                                socketId: true
+                            }
                         }
                     }
                 }
             }
         })
-        return result.chats[0].messages[0];
+        return { storedMessage: result.chats[0].messages[0], users: result.chats[0].users };
+    }
+
+    getMessageHistory = async (username: string, chatId: string, limit: number, offset: number) => {
+        const result = await prisma.user.findUnique({
+            where: { username: username },
+            select: {
+                chats: {
+                    where: {
+                        id: BigInt(chatId),
+                    }, select: {
+                        messages: {
+                            orderBy: {
+                                createdAt: 'desc'
+                            },
+                            take: limit,
+                            skip: offset
+                        }
+                    }
+                }
+            }
+        })
+        return result.chats[0].messages.reverse();
     }
 }

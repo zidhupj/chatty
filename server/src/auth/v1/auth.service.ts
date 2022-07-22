@@ -43,7 +43,8 @@ export class AuthServicev1 {
             httpOnly: true,
             secure: true,
             sameSite: "none",
-            domain: "localhost"
+            domain: "localhost",
+            maxAge: 1000 * 60 * 60 * 24 * 7
         }
         const accessToken = await generateAccessToken(user);
         res.cookie('accessToken', accessToken, cookieOptions);
@@ -81,22 +82,23 @@ export class AuthServicev1 {
     }
 
     login = async (dto: LoginOtdv1) => {
+        let user;
         try {
-            const user = await prisma.user.findUnique({
+            user = await prisma.user.findUnique({
                 where: Object.entries(dto.contact).reduce((a, [k, v]) => (v ? (a[k] = v, a) : a), {})
             })
-            // console.log(user)
-            if (!user) {
-                throw new HttpException({
-                    error: `Invalid Credentials`,
-                    message: ["User does not exist!"],
-                    status: HttpStatus.NOT_FOUND
-                }, HttpStatus.NOT_FOUND)
-            }
-            return user;
         } catch (err) {
             console.log(err)
             throw new Error("Database user retrieval critical internal error!")
         }
+
+        if (!user) {
+            throw new HttpException({
+                error: `Invalid Credentials`,
+                message: ["User does not exist!"],
+                status: HttpStatus.NOT_FOUND
+            }, HttpStatus.NOT_FOUND)
+        }
+        return user;
     }
 }
